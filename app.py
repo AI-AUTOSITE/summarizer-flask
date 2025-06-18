@@ -44,3 +44,28 @@ def speak():
         return send_file(tmp.name, mimetype="audio/mpeg", as_attachment=False)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+from flask import request
+import tempfile
+
+@app.route("/transcribe", methods=["POST"])
+def transcribe():
+    audio_file = request.files.get("file")
+    if not audio_file:
+        return jsonify({"error": "No audio file provided"}), 400
+    try:
+        # 一時ファイルとして保存
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp:
+            audio_file.save(temp.name)
+
+            # Whisperで音声認識（transcription）
+            transcription = client.audio.transcriptions.create(
+                model="whisper-1",
+                file=open(temp.name, "rb"),
+                response_format="json"
+            )
+
+        return jsonify({"text": transcription.text})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
